@@ -14,10 +14,10 @@ if len(sys.argv) == 5:
 
     print("-" * 100)
 
-    if os.name == 'posix':
-        barra_diretorio = util.barra_linux
-    else:
+    if os.name != 'posix':
         barra_diretorio = util.barra_windows
+    else:
+        barra_diretorio = util.barra_linux
 
     busca = Buscador(sys.argv[1], sys.argv[2], sys.argv[
                      3], sys.argv[4], barra_diretorio)
