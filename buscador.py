@@ -1,17 +1,20 @@
 import os
 import re
+import util
 
 
 class Buscador:
 
-    def __init__(self, diretorio, palavraChave, padrao, is_mostrar_linha):
+    def __init__(self, diretorio, palavra_chave, padrao, is_mostrar_linha, barra_diretorio):
         self.diretorio = diretorio
+        self.barra_diretorio = barra_diretorio
 
-        if self.diretorio[-1] != '/':
-            self.diretorio += '/'
+        self.verificar_barras_do_diretorio_por_sistema_operacional()
 
-        self.diretorio = self.diretorio.replace('/', '\\')
-        self.palavraChave = palavraChave
+        if self.diretorio[-1] != self.barra_diretorio:
+            self.diretorio += self.barra_diretorio
+
+        self.palavra_chave = palavra_chave
         self.padrao = padrao
         self.is_mostrar_linha = is_mostrar_linha
         self.encontrados = {}
@@ -21,59 +24,66 @@ class Buscador:
             for file in files:
 
                 if self.is_arquivo_do_padrao(file):
-                    if root[-1] != '\\':
-                        root += '\\'
+                    if self.is_fim_caminho_diretorio_sem_barra(root):
+                        root += self.barra_diretorio
 
                     try:
-                        arquivoAberto = open(
-                            root + file, 'rt', encoding="utf8")
+                        arquivo = open(root + file, 'rt', encoding="utf8")
 
-                        if self.is_mostrar_linha != 'true':
-                            textoArquivo = arquivoAberto.read()
+                        if self.is_mostrar_linha == 'false':
+                            texto_arquivo = arquivo.read()
                             contador = self.get_ocorrencias_palavra_chave(
-                                self.palavraChave, textoArquivo)
+                                self.palavra_chave, texto_arquivo)
 
                             if contador > 0:
                                 self.encontrados[root + file] = contador
-
                         else:
-                            linhas = arquivoAberto.readlines()
+                            linhas = arquivo.readlines()
 
-                            quantidadeOcorrenciasArquivo = 0
-                            textoLinhasEncontradas = {}
+                            quantidade_ocorrencias_arquivo = 0
+                            texto_linhas_encontradas = {}
 
-                            for textoLinha in linhas:
+                            for texto_linha in linhas:
                                 contador = self.get_ocorrencias_palavra_chave(
-                                    self.palavraChave, textoLinha)
+                                    self.palavra_chave, texto_linha)
 
                                 if contador > 0:
-                                    quantidadeOcorrenciasArquivo += 1
-                                    textoLinhasEncontradas[quantidadeOcorrenciasArquivo] = textoLinha
+                                    quantidade_ocorrencias_arquivo += 1
+                                    texto_linhas_encontradas[
+                                        quantidade_ocorrencias_arquivo] = texto_linha
+                            if quantidade_ocorrencias_arquivo > 0:
+                                self.encontrados[
+                                    root + file] = quantidade_ocorrencias_arquivo
+                                util.logar_valor("arquivo", (root + file))
 
-                            if quantidadeOcorrenciasArquivo > 0:
-                                self.encontrados[root + file] = quantidadeOcorrenciasArquivo
-                                self.logar_valor("arquivo", (root + file))
-
-                                for numeroLinha, textoLinha in textoLinhasEncontradas.items():
-                                    self.logar_valor("Ocorrencia " + str(numeroLinha), textoLinha)
+                                for numero_linha, texto_linha in texto_linhas_encontradas.items():
+                                    util.logar_valor(
+                                        "Ocorrencia " + str(numero_linha), texto_linha)
                                     print("")
 
                     except Exception as error:
-                        self.logar_valor("erro", str(error))
-                        self.logar_valor(
-                            "Erro lendo o arquivo", root + file)
+                        util.logar_valor("erro", str(error))
+                        util.logar_valor("Erro lendo o arquivo", root + file)
                         continue
                     finally:
-                        arquivoAberto.close()
+                        arquivo.close()
 
-    def get_ocorrencias_palavra_chave(self, palavraChave, texto):
-        return len(re.findall(palavraChave, texto, re.IGNORECASE))
+    def get_ocorrencias_palavra_chave(self, palavra_chave, texto):
+        return len(re.findall(palavra_chave, texto, re.IGNORECASE))
 
     def is_arquivo_do_padrao(self, arquivo):
         return re.match(r'.*?\.' + self.padrao + '$', arquivo) is not None
 
-    def logar_valor(self, nome, valor):
-        print(nome.title() + ": [" + valor + "]")
+    def is_fim_caminho_diretorio_sem_barra(self, caminho):
+        return (caminho[-1] != self.barra_diretorio)
 
-    def getResultados(self):
+    def get_resultados(self):
         return self.encontrados
+
+    def verificar_barras_do_diretorio_por_sistema_operacional(self):
+        if self.barra_diretorio == util.barra_linux:
+            self.diretorio = self.diretorio.replace(
+                util.barra_windows, util.barra_linux)
+        else:
+            self.diretorio = self.diretorio.replace(
+                util.barra_linux, util.barra_windows)
